@@ -1,0 +1,47 @@
+name: Director context benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out measured sources
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Pull Python 3.11 image and retain its digest
+        shell: bash
+        run: |
+          docker pull python:3.11-slim
+          docker image inspect python:3.11-slim --format '{{index .RepoDigests 0}}' > image-digest.txt
+      - name: Run regression and unchanged recorder with enforced restrictions
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/director-results"
+          task_image=$(cat image-digest.txt)
+          docker run --name director-benchmark \
+            --cpus=2 --memory=256m --memory-swap=256m --pids-limit=64 \
+            --network=none --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --tmpfs /tmp:rw,nosuid,size=32m \
+            --user "$(id -u):$(id -g)" \
+            -e DIRECTOR_IMAGE="$task_image" -e DIRECTOR_COMMIT="$GITHUB_SHA" \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$GITHUB_WORKSPACE:/source:ro" \
+            -v "$RUNNER_TEMP/director-results:/results:rw" \
+            -w /tmp "$task_image" \
+            python /source/run_benchmark.py --source /source --results /results
+      - name: Preserve all observations, including unsuccessful requests
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: director-context-run
+          path: ${{ runner.temp }}/director-results/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
