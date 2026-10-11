@@ -138,10 +138,13 @@ failure is reported and its execution log retained rather than inventing results
 An artifact may contain failed checks and is not automatically a successful
 submission. Review its validation report before submitting.
 
-Current source handoff has not yet run the remote workflow. Consequently it
-contains no fabricated `benchmark_results.json` or `benchmark_run.log`.
-In a final workflow-produced ZIP, those files are actual measurements from that
-run; the reported environment in those files supersedes this source-stage note.
+This archive contains 28 actual observations from the unchanged
+recorder and its captured execution log. See `measurement_environment.json`
+and the recorder's environment metadata for the measured platform, Python,
+image digest and CPU restrictions. `regression_run.log` and
+`validation_report.json` record actual checks; unsuccessful requests are
+retained. Official large-instance 99% quality remains unverified without
+the assessment's frozen comparison utilities.
 
 Official runner and isolation references:
 
