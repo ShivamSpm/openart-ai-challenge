@@ -1,0 +1,23 @@
+{
+  "versions": [
+    {"id": "draft", "parents": []},
+    {"id": "club", "parents": ["draft"]},
+    {"id": "rooftop", "parents": ["draft"]},
+    {"id": "review", "parents": ["club", "rooftop"]}
+  ],
+  "cards": [
+    {"id": "portrait", "version": "draft", "supersedes": [], "requires": [], "conflict_group": null, "tokens": 32, "covers": ["identity", "face"], "text": "Mara is a retired violinist with a short silver bob."},
+    {"id": "jacket", "version": "draft", "supersedes": [], "requires": ["portrait"], "conflict_group": "outerwear", "tokens": 16, "covers": ["costume"], "text": "She wears a dark leather jacket."},
+    {"id": "coat", "version": "club", "supersedes": ["jacket"], "requires": ["portrait"], "conflict_group": "outerwear", "tokens": 23, "covers": ["costume", "silhouette"], "text": "Replace the jacket with a long ivory coat for the club sequence."},
+    {"id": "neon", "version": "club", "supersedes": [], "requires": [], "conflict_group": "palette", "tokens": 20, "covers": ["lighting", "palette"], "text": "Use warm amber windows against cool neon reflections."},
+    {"id": "moon", "version": "rooftop", "supersedes": [], "requires": [], "conflict_group": "palette", "tokens": 18, "covers": ["lighting", "palette"], "text": "Use a restrained moonlit palette for the rooftop branch."},
+    {"id": "amber_arrival", "version": "club", "supersedes": [], "requires": ["coat", "neon"], "conflict_group": null, "tokens": 27, "covers": ["location", "continuity"], "text": "She arrives beneath the club's amber entrance light."},
+    {"id": "closeup", "version": "review", "supersedes": [], "requires": ["portrait"], "conflict_group": null, "tokens": 15, "covers": ["face", "continuity"], "text": "A close-up connects her arrival to recognition of the pianist."},
+    {"id": "sleeve_detail", "version": "review", "supersedes": [], "requires": ["portrait"], "conflict_group": null, "tokens": 12, "covers": ["gesture", "costume"], "text": "Keep the embroidered jacket sleeve visible during the bowing gesture."}
+  ],
+  "features": {"identity": 14, "face": 7, "costume": 9, "silhouette": 3, "lighting": 8, "palette": 5, "location": 11, "continuity": 12, "gesture": 6},
+  "head": "review",
+  "budget": 100,
+  "mandatory": ["portrait"],
+  "contradictions": [["coat", "sleeve_detail"], ["moon", "amber_arrival"]]
+}

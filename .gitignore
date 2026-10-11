@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.zip
+benchmark_results.json
+benchmark_run.log
+measurement_environment.json
+regression_run.log
+validation_report.json
+validation_run.log
+local_smoke_results.json
