@@ -67,7 +67,56 @@ run is not evidence of the contract's Linux/Python 3.11 execution requirements.
    cards. General large-request search stops before the five-second process limit,
    preserving a legal incumbent. An unsuccessful search never implies infeasibility.
 
-The optional certificate and other optional capabilities are not claimed.
+6. Emit the contract's integer-price certificate on every `ok` response. The
+   bound includes **every active visible card**, including unusable ones, and
+   prices for every declared feature. Invalid/infeasible responses omit it.
+
+## Recomputable quality bounds
+
+For certificate scale `s`, budget price `p`, and feature prices `z`, independently
+recompute the following using the original request and active-card semantics:
+
+```text
+U = budget*p
+    + sum_active_cards max(0, sum_covered_features z[f] - p*tokens)
+    + sum_all_features (weight[f]*s - z[f])
+```
+
+The legal returned utility is a lower bound on the optimum, while `U/s` is an
+upper bound. Since utility is integral, `floor(U/s)` is also a valid upper bound.
+For any legal selection, its scaled feature value is at most its selected-card
+price sum plus all feature slack. Subtract and add `p` times selected cost;
+replace cost by budget and each card surplus by its positive part, summed over
+all active cards. This gives exactly the expression above. Requirements,
+mandatory choices, groups and contradictions are relaxed, so they cannot make
+the bound invalid, but they can make it loose.
+
+Disjoint coverage has an analytic fractional-knapsack dual: set feature prices
+to their full weights and find the budget-price breakpoint by exact rational
+sorting. Evaluate both adjacent integer prices at scale 1,000,000 to preserve
+validity after rounding. Overlapping coverage also tries up to 80 projected
+subgradient updates in a 100 ms search window, retaining the best prices as
+evaluated with exact integers. The search window excludes initial bound setup
+and is additionally limited by the solver's remaining deadline allowance.
+Optimization uses floating point only to propose new prices; certificate
+validity and threshold comparisons use exact integers. No optimization success
+is assumed: the fallback bound is total reachable feature weight.
+
+`independent_check.py` recomputes each bound without importing the solver and
+reports these separate properties:
+
+- Valid prices and upper numerator/scale.
+- The optional 5% gap: `100*U <= 105*utility*s`.
+- A proof of at least 99% of the true optimum: `99*U <= 100*utility*s`.
+- A proof of exact optimum when `floor(U/s) == utility`.
+
+A 5% upper-bound gap does **not** establish 99% quality. A loose certificate
+does not establish that the selection is poor either. The contract's relaxation
+can have an integrality gap even for disjoint coverage, so tightness cannot be
+guaranteed on every permitted input. The workflow independently gates valid
+certificates for every successful request and the 5% gap on every public request
+matching the specified optional profile. Other optional capabilities remain
+unclaimed. The recorder and its observations are unchanged.
 
 ## Tests and independent evaluation
 
@@ -80,6 +129,10 @@ python3.11 -m unittest discover -s tests -v
 Tests include malformed raw input, schema limits, branching and supersession,
 requirements and cycles, shared costs, exact contradictions, mandatory feasibility,
 the sample, and small generated cases checked with a separate exhaustive oracle.
+Certificate regressions cover fractional rounding, legitimate loose bounds,
+unusable active cards, inactive-card profile conditions, missing/invalid prices,
+expired price-search deadlines and generated overlapping-coverage bounds checked
+against exhaustive optima.
 The independent checker uses sets and its own validation/state logic; it does
 not import the solver's model or search implementation.
 
@@ -103,9 +156,11 @@ The recorder measures and retains every request, including unsuccessful requests
 it is not a legality checker or sandbox. Do not edit `benchmark_results.json`,
 `benchmark_run.log`, the supplied corpus, or the supplied recorder. The checker
 writes additional findings separately. There are no supplied frozen comparison
-utilities, so official large-instance 99% quality is not established merely by
-passing the recorder or independent legality checks. Exact small-case utility is
-checked separately; achieved large-case utility is reported honestly.
+utilities, so passing the recorder or legality checks alone does not establish
+official large-instance 99% quality. A sufficiently tight certificate proves
+99% of the true optimum for its individual request; the independent report
+counts those proofs separately. Exact small-case utility and achieved large-case
+utility are checked/reported separately.
 
 ## Remote Linux workflow and measurement environment
 
@@ -138,13 +193,10 @@ failure is reported and its execution log retained rather than inventing results
 An artifact may contain failed checks and is not automatically a successful
 submission. Review its validation report before submitting.
 
-This archive contains 28 actual observations from the unchanged
-recorder and its captured execution log. See `measurement_environment.json`
-and the recorder's environment metadata for the measured platform, Python,
-image digest and CPU restrictions. `regression_run.log` and
-`validation_report.json` record actual checks; unsuccessful requests are
-retained. Official large-instance 99% quality remains unverified without
-the assessment's frozen comparison utilities.
+Current source handoff has not yet run the remote workflow. Consequently it
+contains no fabricated `benchmark_results.json` or `benchmark_run.log`.
+In a final workflow-produced ZIP, those files are actual measurements from that
+run; the reported environment in those files supersedes this source-stage note.
 
 Official runner and isolation references:
 

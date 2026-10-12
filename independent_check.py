@@ -181,7 +181,9 @@ def _certificate_check(state, certificate, utility):
             upper += max(0, sum(prices[f] for f in card["covers"]) - price * card["tokens"])
         upper += sum(weight * scale - prices[f] for f, weight in state["weights"].items())
         return {"valid": True, "upper_numerator": upper, "scale": scale,
-                "within_5_percent": 100 * upper <= 105 * utility * scale}
+                "within_5_percent": 100 * upper <= 105 * utility * scale,
+                "proves_99_percent_of_optimum": 99 * upper <= 100 * utility * scale,
+                "proves_exact_optimum": upper // scale == utility}
     except (CheckError, TypeError, KeyError):
         return {"valid": False, "within_5_percent": False}
 
@@ -234,6 +236,21 @@ def check_response(request, response):
         # A bad optional certificate does not invalidate otherwise legal core fields.
         result["certificate"] = _certificate_check(state, response["certificate"], utility)
     return result
+
+
+def certificate_profile(request):
+    """Identify the public optional tight-gap profile independently."""
+    state = inspect_request(request)
+    if request["contradictions"] or any(c["requires"] or c["conflict_group"] is not None
+                                         for c in request["cards"]):
+        return False
+    covered = set()
+    for card_id in state["active"]:
+        features = set(state["cards"][card_id]["covers"])
+        if features & covered:
+            return False
+        covered.update(features)
+    return True
 
 
 def brute_force_optimum(request, max_optional=24):
@@ -331,8 +348,10 @@ def check_observations(observations, corpus, corpus_bytes=None):
         if type(rss) is not int or not 0 <= rss <= 256 * 1024:
             errors.append("RSS exceeds the 256 MiB envelope or is missing")
         optimum = None
+        tight_profile = False
         if checked["expected_status"] == "ok":
             state = inspect_request(request)
+            tight_profile = certificate_profile(request)
             if len(state["active"]) <= 24:
                 optimum = brute_force_optimum(request)
                 if checked.get("utility") != optimum:
@@ -343,12 +362,15 @@ def check_observations(observations, corpus, corpus_bytes=None):
         records.append({"id": record_id, "passed": not errors, "errors": errors,
                         "expected_status": checked["expected_status"], "utility": checked.get("utility"),
                         "tokens": checked.get("tokens"), "exact_optimum": optimum,
-                        "certificate": checked["certificate"]})
+                        "certificate": checked["certificate"], "certificate_tight_gap_profile": tight_profile})
     missing = set(requests) - seen
     if missing:
         global_errors.append("missing observations: " + ", ".join(sorted(missing)))
     ordered_times = sorted(large_times)
     complete_large_measurements = len(large_times) == expected_large_count
+    successful = [r for r in records if r["expected_status"] == "ok"]
+    profiled = [r for r in successful if r["certificate_tight_gap_profile"]]
+    certificate_valid = lambda r: bool(r["certificate"] and r["certificate"].get("valid"))
     return {"schema": "openart-context-independent-checks/1", "passed": not global_errors and all(r["passed"] for r in records),
             "global_errors": global_errors, "requests": len(requests), "instances": records,
             "large_workload": {"expected_count": expected_large_count, "count": len(large_times),
@@ -356,6 +378,16 @@ def check_observations(observations, corpus, corpus_bytes=None):
                                "p95_wall_ms": ordered_times[math.ceil(.95 * len(ordered_times)) - 1] if ordered_times and complete_large_measurements else None,
                                "maximum_rss_kib": max(large_rss) if large_rss and complete_large_measurements else None},
             "official_large_quality_verified": False,
+            "certificates": {"expected_count": len(successful),
+                             "valid_count": sum(certificate_valid(r) for r in successful),
+                             "all_valid": not missing and not global_errors and all(certificate_valid(r) for r in successful),
+                             "tight_gap_profile_count": len(profiled),
+                             "tight_gap_profile_passed": not missing and not global_errors and all(
+                                 certificate_valid(r) and r["passed"] and r["certificate"]["within_5_percent"] for r in profiled),
+                             "proven_99_percent_count": sum(certificate_valid(r) and r["passed"] and
+                                 r["certificate"]["proves_99_percent_of_optimum"] for r in successful),
+                             "proven_exact_count": sum(certificate_valid(r) and r["passed"] and
+                                 r["certificate"]["proves_exact_optimum"] for r in successful)},
             "quality_note": "Frozen independently verified large-instance comparison utilities are not supplied; legality and observations alone cannot establish official 99% quality.",
             "environment_note": "CPU/network/isolation restrictions and Linux/Python 3.11 must be verified separately; recorded metadata is not itself enforcement."}
 

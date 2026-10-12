@@ -37,6 +37,8 @@ def main() -> int:
             response = json.loads(stdout)
             report = check_response(instance["request"], response)
             passed = process.returncode == 0 and not report["core_errors"]
+            if response.get("status") == "ok":
+                passed &= bool(report["certificate"] and report["certificate"].get("valid"))
             record = {"id": instance["id"], "exit_code": process.returncode,
                       "stdout": stdout, "stderr": stderr, "response": response,
                       "independent_check": report, "passed": passed}

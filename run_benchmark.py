@@ -92,6 +92,9 @@ def main() -> int:
                                "--output", str(package / "validation_report.json")],
                               package / "validation_run.log", results)
     observations = json.loads((package / "benchmark_results.json").read_text(encoding="utf-8"))
+    validation = json.loads((package / "validation_report.json").read_text(encoding="utf-8"))
+    if not validation["certificates"]["all_valid"] or not validation["certificates"]["tight_gap_profile_passed"]:
+        check_status = check_status or 1
     readme = package / "README.md"
     stage_note = ("Current source handoff has not yet run the remote workflow. Consequently it\n"
                   "contains no fabricated `benchmark_results.json` or `benchmark_run.log`.\n"

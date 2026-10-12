@@ -11,7 +11,7 @@ import zipfile
 def build(root: Path, output: Path, require_results: bool = False) -> None:
     root = root.resolve()
     output = output.resolve()
-    required = ["context_solver.py", "context_model.py", "context_search.py", "README.md",
+    required = ["context_solver.py", "context_model.py", "context_search.py", "context_certificate.py", "README.md",
                 "benchmark_runner.py", "benchmark_inputs.json", "tests/test_context.py"]
     if require_results:
         required += ["benchmark_results.json", "benchmark_run.log"]
