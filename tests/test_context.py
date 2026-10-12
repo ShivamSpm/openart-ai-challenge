@@ -94,6 +94,13 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(json.dumps(value, sort_keys=True), before, "solver mutated the input")
         if expected_utility is not None:
             self.assertEqual(response["utility"], expected_utility)
+        if response["status"] == "ok":
+            self.assertTrue(checked["certificate"] and checked["certificate"]["valid"])
+            if expected_utility is not None:
+                self.assertGreaterEqual(checked["certificate"]["upper_numerator"],
+                                        expected_utility * checked["certificate"]["scale"])
+        else:
+            self.assertNotIn("certificate", response)
         return response
 
     def test_empty_and_zero_budget(self):
